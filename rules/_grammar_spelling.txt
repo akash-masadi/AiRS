@@ -1,0 +1,6 @@
+Analyze a resume for grammatical errors and spelling mistakes and return the result in a CSV file with the following columns: 
+"type, score, suggestions."
+1. Grammar Errors: Identify and correct any grammatical mistakes, including verb tense, subject-verb agreement, sentence structure, and punctuation.
+2. Spelling Mistakes: Highlight and correct any spelling errors.
+3. Suggestions for Improvement: Offer suggestions to improve clarity, readability, and professionalism.
+

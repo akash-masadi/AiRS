@@ -1,0 +1,73 @@
+Components and Weights
+Resume Parsing and Basic Information (10%)
+
+Contact Information: 5%
+Professional Summary: 5%
+Work Experience (30%)
+
+Relevance of Experience: 10%
+Quantifiable Achievements: 10%
+Use of Action Verbs: 10%
+Skills (20%)
+
+Relevance to Job Description: 10%
+Diversity of Skills: 10%
+Education (10%)
+
+Relevance of Education: 5%
+Achievements and Honors: 5%
+Grammar and Spelling (10%)
+
+Error-Free Content: 10%
+Formatting and Readability (10%)
+
+Clear Structure and Sections: 5%
+Visual Appeal: 5%
+Additional Sections (10%)
+
+Certifications and Awards: 5%
+Projects and Publications: 5%
+Scoring Breakdown
+Resume Parsing and Basic Information (10 points)
+
+Full contact information present: 5 points
+Professional summary present and relevant: 5 points
+Work Experience (30 points)
+
+Relevant work experience: 10 points
+Quantifiable achievements: 10 points
+Use of strong action verbs: 10 points
+Skills (20 points)
+
+Skills relevant to the job description: 10 points
+Diversity of skills (technical, soft skills, etc.): 10 points
+Education (10 points)
+
+Relevant education to the job role: 5 points
+Notable achievements and honors: 5 points
+Grammar and Spelling (10 points)
+
+Error-free resume: 10 points
+Formatting and Readability (10 points)
+
+Clear structure and well-defined sections: 5 points
+Visually appealing formatting: 5 points
+Additional Sections (10 points)
+
+Relevant certifications and awards: 5 points
+Noteworthy projects and publications: 5 points
+
+
+Give the score of the above provided resume based on the above scoring system. The input will be a dictionary with keys as the components and values as the scores. The output should be the total score and individual score of the resume.
+
+The output should be a dictionary with keys as the components and values as the scores. The total score should be rounded to the nearest integer.
+like :
+compenents = {
+    "Resume Parsing and Basic Information": 10,
+    "Work Experience": 30,
+    "Skills": 20,
+    "Education": 10,
+    "Grammar and Spelling": 10,
+    "Formatting and Readability": 10,
+    "Additional Sections": 10
+}

@@ -1,0 +1,2 @@
+Evaluate the presence and impact of quantifiable achievements in the resume and return the result in a CSV file with the following columns: 
+"type, score, suggestions."

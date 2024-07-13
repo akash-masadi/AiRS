@@ -1,0 +1,2 @@
+Ensure all essential sections (contact information, summary, work experience, education, skills, etc.) are present and well-structured  and return the result in a CSV file with the following columns: 
+"type, score, suggestions."

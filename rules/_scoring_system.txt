@@ -71,3 +71,5 @@ compenents = {
     "Formatting and Readability": 10,
     "Additional Sections": 10
 }
+
+Never give full marks for the components .

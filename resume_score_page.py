@@ -10,6 +10,17 @@ from myUtils import extract_and_remove_component_scores, load_file, extract_text
 # Load environment variables
 load_dotenv()
 
+# Load rules and scoring files
+@st.cache_data
+def load_all_files():
+    scoring = load_file("./rules/_scoring.txt")
+    scoring_system = load_file("./rules/_scoring_system.txt")
+    grammar_spelling = load_file("./rules/_grammar_spelling.txt")
+    structure = load_file("./rules/_structure.txt")
+    action_verbs = load_file("./rules/_action_verbs.txt")
+    quantifiable = load_file("./rules/_quantifiable.txt")
+    return scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable
+
 # Configure Generative AI with API key from environment variable
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -17,13 +28,7 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 chat = model.start_chat(history=[])
 
-# Load rules and scoring files
-scoring = load_file("./rules/_scoring.txt")
-scoring_system = load_file("./rules/_scoring_system.txt")
-grammar_spelling = load_file("./rules/_grammar_spelling.txt")
-structure = load_file("./rules/_structure.txt")
-action_verbs = load_file("./rules/_action_verbs.txt")
-quantifiable = load_file("./rules/_quantifiable.txt")
+scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable = load_all_files()
 
 def get_gemini_response(resume_data):
     global chat, scoring_system
@@ -42,7 +47,7 @@ def plot_scores(st, score_dict):
     total_score = sum(score_dict.values())
     max_score = 100  # Assuming the maximum possible score is 100
 
-    # Create Altair bar chart
+    # Create Altair bar chart for component scores
     bar_chart = alt.Chart(df).mark_bar().encode(
         x=alt.X('Scores:Q', title='Scores'),
         y=alt.Y('Components:O', title='Components', sort='-x'),  # Sorting components by score descending
@@ -68,37 +73,15 @@ def plot_scores(st, score_dict):
         title='Total Score Breakdown'
     )
 
-    # Data for total score vs overall score pie chart
-    total_score_data = pd.DataFrame({
-        'Category': ['Total Score', 'Remaining'],
-        'Value': [total_score, max_score - total_score]
-    })
-
-    # Create pie chart for total score vs overall score
-    total_score_pie_chart = alt.Chart(total_score_data).mark_arc().encode(
-        color=alt.Color('Category:N', legend=None),
-        tooltip=['Category', 'Value'],
-        theta='Value:Q',  # Angle encoding based on Value
-        radius=alt.Radius(),  # Adjust radius as needed
-    ).properties(
-        width=400,
-        height=400,
-        title=f'Total Score ({total_score}) vs. Overall Score ({max_score})'
-    )
-
     st.subheader("Total Score vs. Overall Score")
-    st.altair_chart(total_score_pie_chart, use_container_width=True)
-
-    st.subheader("Total Score Breakdown")
     st.altair_chart(pie_chart, use_container_width=True)
 
-    # Display the charts using Streamlit
     st.subheader("Resume Component Scores")
     st.altair_chart(bar_chart, use_container_width=True)
 
-def resume_score(st):
+def resume_score():
     global chat
-    st.empty()
+
     # File uploader for resume
     uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
     submit = st.button("Evaluate Resume")
@@ -142,4 +125,5 @@ def resume_score(st):
                 st.error("Unexpected response structure")
 
 if __name__ == "__main__":
-    resume_score(st)
+    st.title("Resume Evaluation App")
+    resume_score()

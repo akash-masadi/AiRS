@@ -5,8 +5,11 @@ import os
 import tempfile
 import pandas as pd
 import altair as alt
-from myUtils import extract_and_remove_component_scores, load_file,extract_text
+from myUtils import extract_and_remove_component_scores, load_file, extract_text
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
+# Load environment variables
 load_dotenv()
 
 # Configure Generative AI with API key from environment variable
@@ -16,8 +19,9 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 chat = model.start_chat(history=[])
 
+# Load rules and scoring files
 scoring = load_file("./rules/_scoring.txt")
-scoring_system = load_file("./rules/_scoring_system.txt")
+scoring_system = load_file("./rules/_job_scoring_system.txt")
 grammar_spelling = load_file("./rules/_grammar_spelling.txt")
 structure = load_file("./rules/_structure.txt")
 action_verbs = load_file("./rules/_action_verbs.txt")
@@ -94,14 +98,14 @@ def plot_scores(st, score_dict):
     st.subheader("Resume Component Scores")
     st.altair_chart(bar_chart, use_container_width=True)
 
-def resume_score(st):
+def job_relevant_score():
     global chat
-    st.empty()
     # File uploader for resume
-    uploaded_file = st.file_uploader("Upload your resume", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
+    job_description = st.text_area("Enter the Job Description", height=200)
     submit = st.button("Evaluate Resume")
 
-    if uploaded_file is not None:
+    if uploaded_file is not None and job_description and submit:
         # Determine file type and extract text accordingly
         if uploaded_file.type == "application/pdf":
             # Save uploaded PDF to a temporary file
@@ -114,30 +118,40 @@ def resume_score(st):
             # Read text file
             extracted_text = uploaded_file.read().decode("utf-8")
 
-        if submit:
-            with st.spinner('Evaluating your resume...'):
-                # Initialize chat session
-                chat.send_message(scoring)
+        with st.spinner('Evaluating your resume...'):
+            # Initialize chat session
+            chat.send_message(scoring)
 
-                # Get response from the generative model
-                [response, gen_score] = get_gemini_response(extracted_text)
+            # Get response from the generative model
+            [response, gen_score] = get_gemini_response(extracted_text)
 
-                # Extract and remove component scores from response
-                gen_score, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
-            
-            # Display component scores plot
-            try:
-                plot_scores(st, score_dict["components"])
-            except:
-                print(score_dict)
-            
-            # Display the response score and content
-            # st.subheader("Response Score:")
-            # st.write(gen_score)  # This will print the response structure
+            # Extract and remove component scores from response
+            gen_score, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
 
-            if hasattr(response, 'candidates'):
-                content = response.candidates[0].content.parts[0].text
-                st.subheader("Response:")
-                st.write(content)
-            else:
-                st.error("Unexpected response structure")
+            # Calculate similarity score between job description and resume
+            vectorizer = TfidfVectorizer()
+            tfidf_job_desc = vectorizer.fit_transform([job_description])
+            tfidf_resume = vectorizer.transform([extracted_text])
+            similarity_score = cosine_similarity(tfidf_job_desc, tfidf_resume)[0][0]
+
+        # Display component scores plot
+        try:
+            plot_scores(st, score_dict["components"])
+        except Exception as e:
+            st.error(f"Error plotting scores: {e}")
+
+        # Display the response score and content
+        if hasattr(response, 'candidates'):
+            content = response.candidates[0].content.parts[0].text
+            st.subheader("Response:")
+            st.write(content)
+        else:
+            st.error("Unexpected response structure")
+
+        # Display similarity score
+        st.subheader("Similarity Score with Job Description:")
+        st.write(f"{similarity_score:.2f}")
+
+if __name__ == "__main__":
+    st.title("Job Relevance Score Evaluation")
+    job_relevant_score()

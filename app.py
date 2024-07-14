@@ -7,7 +7,6 @@ from job_relevant_score_page import job_relevant_score
 from streamlit_extras.mention import mention
 from streamlit_extras.bottom_container import bottom
 
-# Page dictionary for navigation
 PAGES = {
     "🌟 Home": home_page,
     "💡 Resume Score": resume_score,
@@ -22,7 +21,7 @@ def main():
             description="Optimize Your Resume for Better Job Matches",
             color_name="blue-70",
         )
-    # Use selectbox for page selection
+
     page_key = st.sidebar.selectbox(
         "Let's go ✨",
         options=list(PAGES.keys())
@@ -31,6 +30,7 @@ def main():
     page_func = PAGES.get(page_key)
     if page_func:
         page_func()
+
     with st.sidebar:
         st.divider()
         st.sidebar.info("Check out the Respository")

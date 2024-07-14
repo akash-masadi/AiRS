@@ -8,11 +8,8 @@ import altair as alt
 from myUtils import extract_and_remove_component_scores, load_file, extract_text, stream_gen
 from streamlit_extras.streaming_write import write
 
-# Load environment variables
 load_dotenv()
 
-# Load rules and scoring files
-@st.cache_data
 def load_all_files():
     scoring = load_file("./rules/_scoring.txt")
     scoring_system = load_file("./rules/_scoring_system.txt")
@@ -22,10 +19,8 @@ def load_all_files():
     quantifiable = load_file("./rules/_quantifiable.txt")
     return scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable
 
-# Configure Generative AI with API key from environment variable
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Initialize the generative model
 model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 chat = model.start_chat(history=[])
 
@@ -38,21 +33,18 @@ def get_gemini_response(resume_data):
     return [response, gen_score]
 
 def plot_scores(st, score_dict):
-    # Convert score_dict to a DataFrame for Altair plotting
     df = pd.DataFrame({
         'Components': list(score_dict.keys()),
         'Scores': list(score_dict.values())
     })
 
-    # Calculate total score
     total_score = sum(score_dict.values())
-    max_score = 100  # Assuming the maximum possible score is 100
+    max_score = 100
 
-    # Create Altair bar chart for component scores
     bar_chart = alt.Chart(df).mark_bar().encode(
         x=alt.X('Scores:Q', title='Scores'),
-        y=alt.Y('Components:O', title='Components', sort='-x'),  # Sorting components by score descending
-        tooltip=['Components', 'Scores']  # Tooltip to show component and score
+        y=alt.Y('Components:O', title='Components', sort='-x'),
+        tooltip=['Components', 'Scores']
     ).properties(
         width=600,
         height=400,
@@ -62,12 +54,11 @@ def plot_scores(st, score_dict):
         titleFontSize=14
     )
 
-    # Create Altair pie chart for total score breakdown
     pie_chart = alt.Chart(df).mark_arc().encode(
         color=alt.Color('Components:N', legend=None),
         tooltip=['Components', 'Scores'],
-        theta='Scores:Q',  # Angle encoding based on Scores
-        radius=alt.Radius(),  # Adjust radius as needed
+        theta='Scores:Q',
+        radius=alt.Radius(),
     ).properties(
         width=400,
         height=400,
@@ -83,45 +74,32 @@ def plot_scores(st, score_dict):
 def resume_score():
     global chat
 
-    # File uploader for resume
     uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
     submit = st.button("Evaluate Resume")
 
     if uploaded_file is not None:
-        # Determine file type and extract text accordingly
         if uploaded_file.type == "application/pdf":
-            # Save uploaded PDF to a temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                 temp_file.write(uploaded_file.read())
                 temp_file_path = temp_file.name
-            # Extract text from the PDF
             extracted_text = extract_text(temp_file_path)
         else:
-            # Read text file
             extracted_text = uploaded_file.read().decode("utf-8")
 
         if submit:
             with st.spinner('Evaluating your resume...'):
-                # Initialize chat session
                 chat.send_message(scoring)
-
-                # Get response from the generative model
                 [response, gen_score] = get_gemini_response(extracted_text)
-
-                # Extract and remove component scores from response
                 gen_score, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
 
-            # Display component scores plot
             try:
                 plot_scores(st, score_dict["components"])
             except Exception as e:
                 st.error(f"Error plotting scores: {e}")
 
-            # Display the response score and content
             if hasattr(response, 'candidates'):
                 content = response.candidates[0].content.parts[0].text
                 st.subheader("Response:")
-                # st.write(content)
                 write(stream_gen(content))
             else:
                 st.error("Unexpected response structure")

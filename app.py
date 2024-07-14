@@ -1,12 +1,9 @@
 from dotenv import load_dotenv
 import streamlit as st
-import streamlit_extras as ste
 import google.generativeai as genai
 from streamlit_extras.colored_header import colored_header
 from streamlit_extras.app_logo import add_logo
-from streamlit_extras.let_it_rain import rain
 from myUtils.file_utils import load_file
-from pages.resume_score_page import resume_score
 import os
 import time
 
@@ -25,15 +22,26 @@ def loading_animation():
     text = st.text("Loading...")
     progress_bar = st.progress(0)
     level = 0
-    while(level<100):
-        time.sleep(0.01)
-        level=level+1
+    while level < 100:
+        time.sleep(0.05)  # Increased delay for better visibility
+        level += 1
         progress_bar.progress(level)
+    return text, progress_bar
+
+def remove_loading_animation(text, progress_bar):
     # Remove loading elements after completion
-    return text,progress_bar
-def remove_loading_animation(text,progress_bar):
     text.empty()
     progress_bar.empty()
+
+@st.cache_data
+def request_intro():
+    # Before requesting intro, start loading animation
+    text, progress_bar = loading_animation()
+    intro_text = load_file("./rules/_intro_to_airs.txt")
+    intro = model.generate_content(intro_text)
+    # Removing loading animations
+    remove_loading_animation(text, progress_bar)
+    return intro.candidates[0].content.parts[0].text
 
 # Main page content
 def home_page():
@@ -44,36 +52,20 @@ def home_page():
         description="Optimize Your Resume for Better Job Matches",
         color_name="blue-70",
     )
-    text,progress_bar=loading_animation()
-    intro = load_file("./rules/_intro_to_airs.txt")
-
-    intro = model.generate_content(intro) 
-    #removing loading animations
-    remove_loading_animation(text,progress_bar)
-    intro = intro.candidates[0].content.parts[0].text
+    intro = request_intro()
     st.write(intro)
     st.image("./assets/home_page.jpeg", caption='AI Resume Scoring', use_column_width=True)
 
-    if st.sidebar.button("Home"):
-        home_page()
-    if st.sidebar.button("Resume Score"):
-        resume_score_page()
-    if st.sidebar.button("Job Description Relevant Score"):
-        job_description_score_page()
-
-# Resume Score page
-def resume_score_page():
-    st.title("Resume Score")
-    resume_score(st)
-
-# Job Description Relevant Score page
-def job_description_score_page():
-    st.title("Job Description Relevant Score")
-    st.write("This page will contain the functionality for scoring job descriptions.")
-    # Add your functionality here
-
 # Initial app setup
+st.set_page_config(page_title="AiRS", page_icon=":material/edit:")
+
 if __name__ == "__main__":
+    # Page navigations
+    AiRS = st.Page("app.py",title="AiRS",icon=":material/star:")
+    resume_score_page = st.Page("resume_score_page.py", title="Resume Score", icon=":material/add_circle:")
+    job_relevant_score = st.Page("job_relevant_score.py", title="Job Description Relevant Score", icon=":material/delete:")
+    pg = st.navigation([AiRS,resume_score_page, job_relevant_score])
     home_page()
+    pg.run()
     st.sidebar.title("Follow us on")
     st.sidebar.write("Social Media Links Here")

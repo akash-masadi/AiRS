@@ -5,4 +5,4 @@ pytesseract
 tesseract
 pdf2image
 opencv-python
-streamlit-extras
+streamlit_extras

@@ -3,7 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import tempfile
-from mypdfprocessor import extract_text, load_file, extract_and_remove_component_scores  # Assuming this is your custom package
+from myUtils import extract_text, load_file, extract_and_remove_component_scores  # Assuming this is your custom package
 import pandas as pd
 
 # Load environment variables

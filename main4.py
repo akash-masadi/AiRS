@@ -3,7 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import tempfile
-from mypdfprocessor import extract_text, load_file, extract_and_remove_component_scores
+from myUtils import extract_text, load_file, extract_and_remove_component_scores
 import pandas as pd
 import altair as alt
 

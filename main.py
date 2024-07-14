@@ -3,7 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import tempfile
-from mypdfprocessor import extract_text  # Assuming this is your custom package
+from myUtils import extract_text  # Assuming this is your custom package
 
 # Load environment variables
 load_dotenv()

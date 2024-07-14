@@ -60,5 +60,4 @@ Projects and Publications (5%):
 Significant projects or publications related to the job role: 3 points
 No projects or publications listed: 0 points
 
-Overall return the Total Score, Suggestions, and a CSV file with the following columns: 
-"type, score, suggestions."
+Overall return the Suggestions

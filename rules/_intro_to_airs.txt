@@ -1,0 +1,1 @@
+Generate an introductory description for an AI-powered Resume Scorer for self-assessment that can extract data from PDF resumes, analyze it based on predefined weights, and generate scores. Highlight its capability to match job descriptions and provide relevant scores accordingly

@@ -5,9 +5,8 @@ import os
 import tempfile
 import pandas as pd
 import altair as alt
-from myUtils import extract_and_remove_component_scores, load_file, extract_text
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from myUtils import extract_and_remove_component_scores, load_file, extract_text, stream_gen
+from streamlit_extras.streaming_write import write
 
 # Load environment variables
 load_dotenv()
@@ -20,15 +19,21 @@ model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 chat = model.start_chat(history=[])
 
 # Load rules and scoring files
-scoring = load_file("./rules/_scoring.txt")
-scoring_system = load_file("./rules/_job_scoring_system.txt")
-grammar_spelling = load_file("./rules/_grammar_spelling.txt")
-structure = load_file("./rules/_structure.txt")
-action_verbs = load_file("./rules/_action_verbs.txt")
-quantifiable = load_file("./rules/_quantifiable.txt")
+@st.cache_data
+def load_all_files():
+    scoring = load_file("./rules/_scoring.txt")
+    scoring_system = load_file("./rules/_scoring_system.txt")
+    grammar_spelling = load_file("./rules/_grammar_spelling.txt")
+    structure = load_file("./rules/_structure.txt")
+    action_verbs = load_file("./rules/_action_verbs.txt")
+    quantifiable = load_file("./rules/_quantifiable.txt")
+    return scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable
 
-def get_gemini_response(resume_data):
+scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable = load_all_files()
+
+def get_gemini_response(resume_data, job_description):
     global chat, scoring_system
+    job_response = chat.send_message(job_description)
     response = chat.send_message(resume_data)
     gen_score = chat.send_message(resume_data + "\n\n\n" + scoring_system)
     return [response, gen_score]
@@ -122,17 +127,11 @@ def job_relevant_score():
             # Initialize chat session
             chat.send_message(scoring)
 
-            # Get response from the generative model
-            [response, gen_score] = get_gemini_response(extracted_text)
+            # Get response from the generative model including job description
+            [response, gen_score] = get_gemini_response(extracted_text, job_description)
 
             # Extract and remove component scores from response
             gen_score, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
-
-            # Calculate similarity score between job description and resume
-            vectorizer = TfidfVectorizer()
-            tfidf_job_desc = vectorizer.fit_transform([job_description])
-            tfidf_resume = vectorizer.transform([extracted_text])
-            similarity_score = cosine_similarity(tfidf_job_desc, tfidf_resume)[0][0]
 
         # Display component scores plot
         try:
@@ -144,14 +143,14 @@ def job_relevant_score():
         if hasattr(response, 'candidates'):
             content = response.candidates[0].content.parts[0].text
             st.subheader("Response:")
-            st.write(content)
+            # st.write(content)
+            write(stream_gen(content))
         else:
             st.error("Unexpected response structure")
 
-        # Display similarity score
-        st.subheader("Similarity Score with Job Description:")
-        st.write(f"{similarity_score:.2f}")
-
 if __name__ == "__main__":
-    st.title("Job Relevance Score Evaluation")
-    job_relevant_score()
+    try:
+        st.title("Job Relevance Score Evaluation")
+        job_relevant_score()
+    except:
+        st.error("Oops! Ran into an error.")

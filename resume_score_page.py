@@ -5,7 +5,8 @@ import os
 import tempfile
 import pandas as pd
 import altair as alt
-from myUtils import extract_and_remove_component_scores, load_file, extract_text
+from myUtils import extract_and_remove_component_scores, load_file, extract_text, stream_gen
+from streamlit_extras.streaming_write import write
 
 # Load environment variables
 load_dotenv()
@@ -120,10 +121,11 @@ def resume_score():
             if hasattr(response, 'candidates'):
                 content = response.candidates[0].content.parts[0].text
                 st.subheader("Response:")
-                st.write(content)
+                # st.write(content)
+                write(stream_gen(content))
             else:
                 st.error("Unexpected response structure")
 
 if __name__ == "__main__":
-    st.title("Resume Evaluation App")
+    st.title("Resume Evaluation 🪄")
     resume_score()

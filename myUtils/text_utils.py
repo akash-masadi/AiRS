@@ -1,4 +1,7 @@
 import re
+import pandas as pd
+import numpy as np
+import time
 
 def extract_and_remove_component_scores(text):
     # Regular expression pattern to find ```python ... ```
@@ -19,3 +22,8 @@ def extract_and_remove_component_scores(text):
         text = re.sub(pattern, '', text, flags=re.DOTALL)
     
     return text.strip(), components
+
+def stream_gen(text):
+    for word in text:
+        yield word
+        time.sleep(0.01)

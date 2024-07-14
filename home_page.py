@@ -4,6 +4,8 @@ import google.generativeai as genai
 from streamlit_extras.colored_header import colored_header
 from streamlit_extras.app_logo import add_logo
 from myUtils.file_utils import load_file
+from streamlit_extras.streaming_write import write
+from myUtils import stream_gen
 import os
 import time
 
@@ -53,8 +55,10 @@ def home_page():
         color_name="blue-70",
     )
     intro = request_intro()
-    st.write(intro)
+    # st.write(intro)
+    write(stream_gen(intro))
     st.image("./assets/home_page.jpeg", caption='AI Resume Scoring', use_column_width=True)
+
 
 if __name__ == "__main__":\
     home_page()

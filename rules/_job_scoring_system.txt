@@ -1,29 +1,42 @@
-Work Experience (40%)
-Relevance of Experience (20%): How closely the experience aligns with the job requirements.
-Quantifiable Achievements (10%): Demonstrating results and impact through numbers and metrics.
-Use of Action Verbs (10%): Showcasing initiative and responsibility using strong action verbs.
-Skills (30%)
-Relevance to Job Description (20%): Matching the skills listed in the job description.
-Diversity of Skills (10%): Possessing a variety of relevant skills (technical, soft skills).
-Education (15%)
-Relevance of Education (10%): Aligns with the required educational background for the job.
-Additional Sections (15%)
-Certifications and Awards (10%): Relevant certifications and awards that enhance candidacy.
-Projects and Publications (5%): Demonstrating relevant skills and experience through projects or publications (if applicable).
-Reduced Emphasis:
+Develop an AI-powered system for scoring and evaluating resumes based on their alignment with a specific job description.
 
-Resume Parsing and Basic Information (5%) - Focuses on ensuring basic information is present, not weighted heavily for matching.
-Contact Information: Still important, but less relevant for initial matching.
-Professional Summary: Can be helpful but may not directly address job requirements.
-Grammar and Spelling (5%) - Remains crucial, but minor errors might be overlooked during initial screening.
-Formatting and Readability (5%) - Similar to grammar, a well-formatted resume is preferred but less critical for matching.
-Clear Structure: Essential for readability but not the primary focus for initial matching.
-Visual Appeal: While important for a polished resume, less crucial for immediate job description relevance.
+Scoring Criteria:
 
-Give the score of the above provided resume based on the above job description and resume match scoring system. The input will be a dictionary with keys as the components and values as the scores. The output should be the total score and individual score of the resume.
+Match with Job Description (Weighted 60%)
+Experience Relevance (20%)
+Perfect Match (10 points)
+Partial Match (5 points)
+No Match (0 points)
+Skills Relevance (20%)
+All Required & Preferred Skills Present (10 points)
+Some Relevant Skills (5 points)
+No Relevant Skills (0 points)
+Quantifiable Achievements (20%)
+Each Quantified Achievement (Up to 5 points, Max 10 points)
+Resume Quality (Weighted 40%)
+Formatting & Readability (10%)
+Clear Structure & Sections (5 points)
+Consistent Formatting (3 points)
+Visually Appealing Layout (2 points) (Points deducted for poorly organized or unclear sections)
+Grammar & Spelling (10%)
+Error-Free Content (10 points)
+Minor Errors (5 points)
+Major Errors (0 points)
+Additional Sections (10%)
+Relevant Certifications/Awards (3 points)
+Relevant Projects/Publications (3 points)
+Professional Summary (10%)
+Clear & Concise Summary (5 points)
+Generic or Irrelevant Summary (-2 points)
+Output:
 
+Overall Score (Based on weighted criteria)
+Never give full marks for the components.
+Give the score of the above provided resume based on the above job description and resume match scoring system.
+The output should be the total score and individual score of the resume.
 The output should be a dictionary with keys as the components and values as the scores. The total score should be rounded to the nearest integer.
 like :
+******************
 compenents = {
     "Resume Parsing and Basic Information": 10,
     "Work Experience": 30,
@@ -33,5 +46,4 @@ compenents = {
     "Formatting and Readability": 10,
     "Additional Sections": 10
 }
-
-Never give full marks for the components .
+*******************

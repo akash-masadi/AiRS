@@ -30,8 +30,8 @@ def remove_loading_animation(text, progress_bar):
     text.empty()
     progress_bar.empty()
 
-@st.cache_data
-def request_intro():
+# @st.cache_data
+def loading_intro():
     text, progress_bar = loading_animation()
     intro_text = load_file("./rules/_intro_to_airs.txt")
     intro = model.generate_content(intro_text)

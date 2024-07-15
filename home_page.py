@@ -46,7 +46,7 @@ def home_page():
         description="Optimize Your Resume for Better Job Matches",
         color_name="blue-70",
     )
-    intro = request_intro()
+    intro = loading_intro()
     write(stream_gen(intro))
     st.image("./assets/home_page.jpeg", caption='AI Resume Scoring', use_column_width=True)
 

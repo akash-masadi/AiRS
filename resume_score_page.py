@@ -99,7 +99,6 @@ def resume_score():
 
             if hasattr(response, 'candidates'):
                 content = response.candidates[0].content.parts[0].text
-                st.subheader("Response:")
                 write(stream_gen(content))
             else:
                 st.error("Unexpected response structure")

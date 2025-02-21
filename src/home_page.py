@@ -361,10 +361,12 @@ def home_page():
         .card-button {
             margin-top: auto;
             text-align: center;
+            text-decorato
         }
         .view-button {
             background-color: #1e88e5;
-            color: white;
+            color: white !important;
+            text-decoration: none !important;
             border: none;
             padding: 8px 16px;
             border-radius: 4px;

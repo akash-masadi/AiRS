@@ -9,6 +9,8 @@ from dateutil import parser
 from google.api_core import exceptions as google_exceptions
 from google.generativeai.types import generation_types
 
+from myUtils.document_validator import validate_and_extract_resume_data
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -136,45 +138,43 @@ class GeminiModel:
         except (IndexError, AttributeError) as e:
             logger.error("Failed to extract AI response: %s", e)
             return ""
-
     def _process_response(self, response: generation_types.GenerateContentResponse, document: dict) -> Dict[str, Any]:
         """Process and validate the AI response for MongoDB insertion."""
         try:
             # Extract AI-generated text using the helper method
             ai_response_text = self._extract_gemini_response(response)
 
-            # Try to parse the AI response as JSON if it looks like JSON
+            # Try to parse the AI response as JSON
             parsed_resume_data = {}
             if ai_response_text.strip().startswith('{'):
                 try:
                     parsed_resume_data = json.loads(ai_response_text)
+                    # Validate and extract the data
+                    validated_data = validate_and_extract_resume_data(parsed_resume_data)
+                    if validated_data is None:
+                        logger.warning("Resume data validation failed")
+                        validated_data = {}
                 except json.JSONDecodeError:
                     logger.warning("Failed to parse AI response as JSON")
+                    validated_data = {}
+            else:
+                logger.warning("AI response is not in JSON format")
+                validated_data = {}
 
             # Construct MongoDB-compatible document
             processed_document = {
-                "_id": document.get("_id"),  # Preserve existing ID if available
-                "system_metadata": {
-                    "processed_at": datetime.datetime.utcnow(),
-                    "parser_version": "1.1.0"
-                },
                 "ai_responses": {
                     "gemini": ai_response_text,
                     "previous_ai": document.get("ai_response", None)
                 },
-                "resume_data": {
-                    "text": document.get("resume_text", ""),
-                    "scores": document.get("scores", {}),
-                    "parsed_structure": parsed_resume_data
-                }
+                "resume_data": validated_data
             }
 
             return processed_document
         
         except Exception as e:
-            logger.error("Response processing error: %s", str(e))
+            logger.error(f"Response processing error: {str(e)}")
             return {}
-
     def get_applicant_details(self, document: Dict[str, Any]) -> Dict[str, Any]:
         """Process document and return structured data"""
         try:

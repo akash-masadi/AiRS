@@ -56,6 +56,14 @@ def plot_scores(st, score_dict):
     st.altair_chart(pie_chart, use_container_width=True)
     st.subheader("Resume Component Scores")
     st.altair_chart(bar_chart, use_container_width=True)
+def write_to_file(filename, content):
+    """Writes the given content to a file."""
+    try:
+        with open(filename, "w", encoding="utf-8") as file:
+            file.write(content)
+        print(f"Content successfully written to {filename}")
+    except Exception as e:
+        print(f"Error writing to file: {e}")
 
 def save_to_mongodb(db, resume_data, response_text, score_dict):
     """Store extracted resume data and AI response in MongoDB."""
@@ -67,6 +75,8 @@ def save_to_mongodb(db, resume_data, response_text, score_dict):
     }
     
     newDocument = st.session_state.gemini.get_applicant_details(document)
+    # logger.info(document)
+    write_to_file('data.txt',str(document))
     
     db.create_document("resumes", newDocument)
 
@@ -96,7 +106,7 @@ def resume_score():
         
             response, gen_score = get_gemini_response(chat, extracted_text)
             gen_score_text, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
-            save_to_mongodb(db, extracted_text, gen_score_text, gen_score)
+            save_to_mongodb(db, extracted_text, gen_score_text, gen_score.candidates[0].content.parts[0].text)
             
             try:
                 if score_dict.get('components'):

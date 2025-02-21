@@ -98,8 +98,8 @@ class GeminiModel:
                 logger.error("Unexpected initialization error: %s", e)
                 raise
         return cls._instance
-
-    def _generate_content(self, prompt: str) -> str:
+    
+    def _generate_content(self, prompt: str) -> generation_types.GenerateContentResponse:
         """Handle content generation with error handling"""
         try:
             response = self.model.generate_content(
@@ -110,7 +110,7 @@ class GeminiModel:
                     max_output_tokens=4000
                 )
             )
-            return response.text
+            return response  # Return the full response object
         except google_exceptions.GoogleAPIError as e:
             logger.error("API request failed: %s", e)
             raise
@@ -119,22 +119,37 @@ class GeminiModel:
             raise
         except Exception as e:
             logger.error("Unexpected generation error: %s", e)
+            raise
 
-
-
-    def _extract_gemini_response(response: generation_types.GenerateContentResponse) -> str:
+    def _extract_gemini_response(self, response: generation_types.GenerateContentResponse) -> str:
         """Extracts the AI-generated text from Gemini response."""
         try:
-            return response.result.candidates[0].content.parts[0].text if response.result.candidates else ""
+            if hasattr(response, 'text'):
+                return response.text
+            elif hasattr(response, 'result'):
+                return response.result.text
+            elif hasattr(response, 'candidates') and response.candidates:
+                return response.candidates[0].content.parts[0].text
+            else:
+                logger.warning("Unexpected response structure")
+                return str(response)
         except (IndexError, AttributeError) as e:
             logger.error("Failed to extract AI response: %s", e)
             return ""
 
-    def _process_response(self, response_text: generation_types.GenerateContentResponse, document: dict) -> Dict[str, Any]:
+    def _process_response(self, response: generation_types.GenerateContentResponse, document: dict) -> Dict[str, Any]:
         """Process and validate the AI response for MongoDB insertion."""
         try:
-            # Extract AI-generated text
-            ai_response_text = self._extract_gemini_response(response_text)
+            # Extract AI-generated text using the helper method
+            ai_response_text = self._extract_gemini_response(response)
+
+            # Try to parse the AI response as JSON if it looks like JSON
+            parsed_resume_data = {}
+            if ai_response_text.strip().startswith('{'):
+                try:
+                    parsed_resume_data = json.loads(ai_response_text)
+                except json.JSONDecodeError:
+                    logger.warning("Failed to parse AI response as JSON")
 
             # Construct MongoDB-compatible document
             processed_document = {
@@ -149,18 +164,15 @@ class GeminiModel:
                 },
                 "resume_data": {
                     "text": document.get("resume_text", ""),
-                    "scores": document.get("scores", {})
-                },
-                "usage_metadata": response_text.result.usage_metadata.to_dict()  # Capture token usage details
+                    "scores": document.get("scores", {}),
+                    "parsed_structure": parsed_resume_data
+                }
             }
-
-            # Log for debugging
-            logger.info("Processed document: %s", json.dumps(processed_document, default=str))
 
             return processed_document
         
         except Exception as e:
-            logger.error("Response processing error: %s", e)
+            logger.error("Response processing error: %s", str(e))
             return {}
 
     def get_applicant_details(self, document: Dict[str, Any]) -> Dict[str, Any]:
@@ -180,17 +192,18 @@ class GeminiModel:
             5. Categorize skills (Technical, Language, etc.)
             
             Resume Text: {document['resume_text'][:10000]}  # Truncate to 10k chars
+            
+            Return ONLY the JSON structure with the extracted information. No additional text or explanation.
             """
 
-            response_text = self._generate_content(prompt)
-            return self._process_response(response_text, document)
+            response = self._generate_content(prompt)
+            return self._process_response(response, document)
             
         except ValueError as e:
-            logger.error("Validation error: %s", e)
+            logger.error("Validation error: %s", str(e))
             return {}
         except Exception as e:
-            logger.error("Processing error: %s", e)
+            logger.error("Processing error: %s", str(e))
             return {}
-
 def get_model() -> GeminiModel:
     return GeminiModel()

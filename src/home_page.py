@@ -13,7 +13,7 @@ import os
 from streamlit_card import card
 
 # Cache the lottie animations and file loading for performance
-@st.cache_data
+# @st.cache_data
 def load_lottie(url: str):
     """Load Lottie animation from URL with fallback to local file"""
     try:
@@ -30,7 +30,7 @@ def load_lottie(url: str):
     except Exception:
         return None
 
-@st.cache_data
+# @st.cache_data
 def get_sample_resumes():
     """
     Get sample resumes with S3 URLs
@@ -113,7 +113,7 @@ def remove_loading_animation(text, progress_bar):
     text.empty()
     progress_bar.empty()
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+# @st.cache_data(ttl=3600)  # Cache for 1 hour
 def loading_intro():
     """Load introduction text using shared model instance"""
     intro_text = load_file("./rules/_intro_to_airs.txt")
@@ -130,7 +130,7 @@ def loading_intro():
     else:
         return "Welcome to AiRS - AI Resume Scorer! Our platform helps you optimize your resume for better job matches using advanced AI analysis."
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+# @st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_resume_tips(category):
     """Get resume tips for different categories"""
     try:
@@ -147,7 +147,7 @@ def get_resume_tips(category):
         * Proofread carefully to eliminate errors and typos
         """
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+# @st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_industry_specific_tips(industry):
     """Get industry-specific resume tips"""
     try:
@@ -164,7 +164,7 @@ def get_industry_specific_tips(industry):
         * Tailor your skills section to match job descriptions in {industry}
         """
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+# @st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_recent_trends():
     """Get recent trends in resume design and formatting"""
     try:

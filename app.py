@@ -1,13 +1,13 @@
 import streamlit as st
 from streamlit_extras.colored_header import colored_header
 from streamlit_extras.app_logo import add_logo
-from home_page import home_page
+from src.home_page import home_page
 from myUtils.file_utils import load_file
-from resume_score_page import resume_score
-from job_relevant_score_page import job_relevant_score
+from src.resume_score_page import resume_score
+from src.job_relevant_score_page import job_relevant_score
 from streamlit_extras.mention import mention
 from streamlit_extras.bottom_container import bottom
-from interview_page import interview
+from src.interview_page import interview
 from models.gemini_model import GeminiModel
 import os
 from dotenv import load_dotenv
@@ -16,15 +16,15 @@ from connectors.mongo_connector import MongoConnector
 # Load environment variables
 load_dotenv()
 
-@st.cache_resource
+# @st.cache_resource
 def get_mongo_connector():
     return MongoConnector()
 
-@st.cache_resource
+# @st.cache_resource
 def get_model():
     return GeminiModel()
 
-@st.cache_data
+# @st.cache_data
 def load_all_files():
     return {
         "scoring": load_file("./rules/_scoring.txt"),

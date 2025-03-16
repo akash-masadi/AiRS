@@ -212,7 +212,7 @@ def home_page():
                 if lottie_resume:
                     st_lottie(lottie_resume, height=300, key="resume_animation")
                 else:
-                    st.image("./assets/home_page.jpeg", caption='AI Resume Scoring', use_column_width=True)
+                    st.image("./assets/home_page.jpeg", caption='AI Resume Scoring', use_container_width=True)
         
         # Quick start guide
         st.divider()

@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 import bson
 from dotenv import load_dotenv
@@ -13,152 +14,205 @@ from myUtils.s3_mongodb import upload_pdf_to_s3_and_mongodb
 
 load_dotenv()
 
-# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-# model = genai.GenerativeModel(model_name='gemini-2.0-flash')
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-
 logger = logging.getLogger("Interview Page")
 
 def get_interview_response(resume_text, chat_history):
-    
     if 'gemini' not in st.session_state:
         st.session_state.gemini = GeminiModel()
     
-    # Format conversation history
-    convo = []
-    for msg in chat_history:
-        role = "Interviewer" if msg["role"] == "assistant" else "Candidate"
-        convo.append(f"{role}: {msg['content']}")
-    conversation_text = "\n".join(convo)
+    # Improved prompt structure
+    prompt = f"""
+    **Role**: Professional Technical Interviewer
+    **Resume**: {resume_text[:3000]}  # Truncate to prevent token overflow
     
-    # Construct structured prompt
-    prompt = f"""You are a professional interviewer conducting a technical interview. Follow these steps:
-    1. Analyze the candidate's resume and conversation history
-    2. Evaluate their last response (highlight strengths/weaknesses)
-    3. Ask a follow-up question that:
-       - Is more challenging than previous questions
-       - Covers different skills/experiences from their resume
-       - Progresses the interview naturally
+    **Conversation History**:
+    {format_chat_history(chat_history)}
     
-    Resume:
-    {resume_text}
+    **Task**:
+    1. Analyze candidate's latest response
+    2. Identify 1 strength and 1 improvement area
+    3. Ask progressively challenging question
+    4. Reference resume experiences
     
-    Conversation:
-    {conversation_text}
-    
-    Format your response:
-    [Evaluation] ... 
-    [Question] ..."""
+    **Response Format**:
+    [Evaluation] <concise analysis>
+    [Question] <next question>"""
     
     response = st.session_state.gemini._generate_content(prompt)
     return response.text
 
-def post_conversation(role,content):
+def format_chat_history(chat_history):
+    return "\n".join(
+        f"{'Interviewer' if msg['role'] == 'assistant' else 'Candidate'}: {msg['content']}"
+        for msg in chat_history
+    )
+
+def stream_response(text):
+    """Generator function for streaming response"""
+    for line in text.split('\n'):
+        for word in line.split():
+            yield word + " "
+            time.sleep(0.08)  # Natural typing speed
+        yield '\n'
+
+def display_chat(stream_write = False):
+    """Display chat messages with streaming effect"""
+    if not stream_write:
+        for msg in st.session_state.chat_history[:-1]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+        
+        if st.session_state.chat_history:
+            last_msg = st.session_state.chat_history[-1]
+            with st.chat_message(last_msg["role"]):
+                if last_msg["role"] == "assistant":
+                    st.write_stream(stream_response(last_msg["content"]))
+                else:
+                    st.markdown(last_msg["content"])
+    else:
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg['content'])
+
+def process_resume(uploaded_file):
+    """Handle resume processing with error handling"""
     try:
-        if "db" not in st.session_state:
-            st.session_state.db = MongoConnector()
-            
-        if 'chat_id' not in st.session_state:
-            st.session_state.chat_id = str(uuid.uuid4())
-        
-        if "chat_length" not in st.session_state:
-            st.session_state.chat_length = 0  
-            
-        st.session_state.db.create_document('conversations',{ 'chat_id' : st.session_state.chat_id, "role": role, "content":content, "order": st.session_state.chat_length })
-        
-        st.session_state.chat_length = st.session_state.chat_length + 1
+        if uploaded_file.type == "application/pdf":
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_file.read())
+                resume_text = extract_text(tmp.name)
+                pdf_metadata_id = upload_pdf_to_s3_and_mongodb(
+                    uploaded_file, tmp.name, "interviewer"
+                )
+                return resume_text
+        return uploaded_file.read().decode()
     except Exception as e:
-        logger.info(f'Error in Posting converstion to mongoDb: {e}')
+        st.error(f"Error processing resume: {str(e)}")
+        return None
 
 def interview():
     try:
         if 'session_id' not in st.session_state:
-            st.session_state.session_id = bson.Binary.from_uuid(uuid.uuid4()) 
+            st.session_state.session_id = str(uuid.uuid4())
+        
         st.title("AI Interviewer 🎙️")
-        uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
+        st.markdown("---")
         
-        # Session state management
-        if 'interview_started' not in st.session_state:
-            st.session_state.interview_started = False
-        if 'chat_history' not in st.session_state:
-            st.session_state.chat_history = []
+        # Initialize session states
+        session_defaults = {
+            'interview_started': False,
+            'chat_history': [],
+            'resume_text': "",
+            'chat_id': str(uuid.uuid4()),
+            'chat_length': 0
+        }
+        for key, val in session_defaults.items():
+            st.session_state.setdefault(key, val)
         
-        col = st.columns(5)
-        with col[0]:
-            if st.button("Evaluate") and uploaded_file:
-                # Process resume
-                if uploaded_file.type == "application/pdf":
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                        tmp.write(uploaded_file.read())
-                        resume_text = extract_text(tmp.name)
-                        pdf_metadata_id = upload_pdf_to_s3_and_mongodb(uploaded_file,tmp.name,"interviewer")
-                else:
-                    resume_text = uploaded_file.read().decode()
-                
-                st.session_state.resume_text = resume_text
-                st.session_state.interview_started = True
-                
-                if 'chat_id' not in st.session_state:
-                    st.session_state.chat_id = str(uuid.uuid4())
-                    
-                if 'chat_length' not in st.session_state:
-                    st.session_state.chat_length = 0
-                
-                # Generate first question
-                first_prompt = f"""Generate an opening interview question (short one) asking for self-introduction 
-                                considering this resume: {resume_text}"""
-                first_response = st.session_state.gemini._generate_content(first_prompt)
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": first_response.text
-                })
-                
-                post_conversation("assistant", first_response.text)
-                
+
+        uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "txt"])
+        cols = st.columns(4)
+        with cols[0]:
+            if st.button("Start Interview") and uploaded_file:
+                if resume_text := process_resume(uploaded_file):
+                    st.session_state.resume_text = resume_text
+                    st.session_state.interview_started = True
+                    generate_first_question(resume_text)
         
-        with col[4]:
-            if st.button("End"):
-                st.session_state.clear()
+        # Sidebar for controls
+        with cols[3]:
+            if st.button("End Interview", type="primary"):
+                reset_session()
+                st.success("Interview session ended successfully!")
                 st.rerun()
+            
+        with st.sidebar:
+            st.divider()
+            st.subheader("Session Stats")
+            st.metric("Questions Asked", len([m for m in st.session_state.chat_history if m["role"] == "assistant"]))
         
-        # Interview interface
+        # Main interview interface
         if st.session_state.interview_started:
-            st.subheader("Interview Session")
+            st.subheader("Live Interview Session")
+            display_chat(True)
             
-            # Display chat history
-            for msg in st.session_state.chat_history:
-                with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
+            # User input with enhanced validation
+            if prompt := st.chat_input("Type your response..."):
+                handle_user_input(prompt)
+                
+        else:
+            st.info("Please upload your resume and click 'Start Interview' to begin")
             
-            # User input handling
-            if user_input := st.chat_input("Type your answer..."):
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": user_input
-                })
-                
-                post_conversation("candidate",user_input)
-                
-                # Generate AI response
-                ai_response = get_interview_response(
-                    st.session_state.resume_text,
-                    st.session_state.chat_history
-                )
-                
-                post_conversation("assistant",ai_response)
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": ai_response
-                })
-                
-                st.rerun()
     except Exception as e:
-        st.info("Run")
+        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Interview error: {str(e)}")
+
+def generate_first_question(resume_text):
+    """Generate initial interview question"""
+    with st.status("Preparing first question...", expanded=True) as status:
+        prompt = f"""
+        Generate an engaging opening question for a technical interview considering:
+        - Resume summary: {resume_text[:2000]}
+        - Should request self-introduction
+        - Should reference one resume item
+        - Keep under 2 sentences"""
+        
+        response = st.session_state.gemini._generate_content(prompt)
+        st.session_state.chat_history.append({
+            "role": "assistant",
+            "content": response.text
+        })
+        post_conversation("assistant", response.text)
+        status.update(label="Ready to begin!", state="complete")
+
+def handle_user_input(prompt):
+    """Process user response and generate next question"""
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    post_conversation("candidate", prompt)
+    
+    with st.spinner("Analyzing your response..."):
+        ai_response = get_interview_response(
+            st.session_state.resume_text,
+            st.session_state.chat_history
+        )
+        st.session_state.chat_history.append({
+            "role": "assistant",
+            "content": ai_response
+        })
+        post_conversation("assistant", ai_response)
+    st.rerun()
+
+def reset_session():
+    """Clean reset of session state"""
+    keys_to_keep = ['db', 'gemini']  # Preserve connections
+    for key in list(st.session_state.keys()):
+        if key not in keys_to_keep:
+            del st.session_state[key]
+
+def post_conversation(role, content):
+    """Enhanced MongoDB posting with retries"""
+    try:
+        if "db" not in st.session_state:
+            st.session_state.db = MongoConnector()
+        document = {
+            'chat_id': st.session_state.chat_id,
+            'session_id': st.session_state.session_id,
+            'role': role,
+            'content': content,
+            'timestamp': time.time(),
+            'order': st.session_state.chat_length
+        }
+        
+        st.session_state.db.create_document('conversations', document)
+        st.session_state.chat_length += 1
+    except Exception as e:
+        logger.error(f'MongoDB Error: {str(e)}')
+        st.toast("⚠️ Failed to save conversation progress", icon="⚠️")
 
 if __name__ == "__main__":
     interview()

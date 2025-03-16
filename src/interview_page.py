@@ -1,17 +1,34 @@
+import logging
+import uuid
+import bson
 from dotenv import load_dotenv
 import streamlit as st
 import google.generativeai as genai
 import os
 import tempfile
+from connectors.mongo_connector import MongoConnector
+from models.gemini_model import GeminiModel
 from myUtils import extract_text
 from myUtils.s3_mongodb import upload_pdf_to_s3_and_mongodb
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel(model_name='gemini-2.0-flash')
+# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# model = genai.GenerativeModel(model_name='gemini-2.0-flash')
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger("Interview Page")
 
 def get_interview_response(resume_text, chat_history):
+    
+    if 'gemini' not in st.session_state:
+        st.session_state.gemini = GeminiModel()
+    
     # Format conversation history
     convo = []
     for msg in chat_history:
@@ -38,74 +55,110 @@ def get_interview_response(resume_text, chat_history):
     [Evaluation] ... 
     [Question] ..."""
     
-    response = model.generate_content(prompt)
+    response = st.session_state.gemini._generate_content(prompt)
     return response.text
 
+def post_conversation(role,content):
+    try:
+        if "db" not in st.session_state:
+            st.session_state.db = MongoConnector()
+            
+        if 'chat_id' not in st.session_state:
+            st.session_state.chat_id = str(uuid.uuid4())
+        
+        if "chat_length" not in st.session_state:
+            st.session_state.chat_length = 0  
+            
+        st.session_state.db.create_document('conversations',{ 'chat_id' : st.session_state.chat_id, "role": role, "content":content, "order": st.session_state.chat_length })
+        
+        st.session_state.chat_length = st.session_state.chat_length + 1
+    except Exception as e:
+        logger.info(f'Error in Posting converstion to mongoDb: {e}')
+
 def interview():
-    st.title("AI Interviewer 🎙️")
-    uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
-    
-    # Session state management
-    if 'interview_started' not in st.session_state:
-        st.session_state.interview_started = False
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    col = st.columns(5)
-    with col[0]:
-        if st.button("Evaluate") and uploaded_file:
-            # Process resume
-            if uploaded_file.type == "application/pdf":
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(uploaded_file.read())
-                    resume_text = extract_text(tmp.name)
-                    upload_pdf_to_s3_and_mongodb(uploaded_file,tmp.name,"interviewer")
-            else:
-                resume_text = uploaded_file.read().decode()
-            
-            st.session_state.resume_text = resume_text
-            st.session_state.interview_started = True
-            
-            # Generate first question
-            first_prompt = f"""Generate an opening interview question asking for self-introduction 
-                            considering this resume: {resume_text}"""
-            first_response = model.generate_content(first_prompt)
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": first_response.text
-            })
-    
-    with col[4]:
-        if st.button("Close Interview"):
-            st.session_state.clear()
-            st.rerun()
-    
-    # Interview interface
-    if st.session_state.interview_started:
-        st.subheader("Interview Session")
+    try:
+        if 'session_id' not in st.session_state:
+            st.session_state.session_id = bson.Binary.from_uuid(uuid.uuid4()) 
+        st.title("AI Interviewer 🎙️")
+        uploaded_file = st.file_uploader("Upload your resume", type=["pdf", "txt"])
         
-        # Display chat history
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+        # Session state management
+        if 'interview_started' not in st.session_state:
+            st.session_state.interview_started = False
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
         
-        # User input handling
-        if user_input := st.chat_input("Type your answer..."):
-            st.session_state.chat_history.append({
-                "role": "user",
-                "content": user_input
-            })
+        col = st.columns(5)
+        with col[0]:
+            if st.button("Evaluate") and uploaded_file:
+                # Process resume
+                if uploaded_file.type == "application/pdf":
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                        tmp.write(uploaded_file.read())
+                        resume_text = extract_text(tmp.name)
+                        pdf_metadata_id = upload_pdf_to_s3_and_mongodb(uploaded_file,tmp.name,"interviewer")
+                else:
+                    resume_text = uploaded_file.read().decode()
+                
+                st.session_state.resume_text = resume_text
+                st.session_state.interview_started = True
+                
+                if 'chat_id' not in st.session_state:
+                    st.session_state.chat_id = str(uuid.uuid4())
+                    
+                if 'chat_length' not in st.session_state:
+                    st.session_state.chat_length = 0
+                
+                # Generate first question
+                first_prompt = f"""Generate an opening interview question (short one) asking for self-introduction 
+                                considering this resume: {resume_text}"""
+                first_response = st.session_state.gemini._generate_content(first_prompt)
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": first_response.text
+                })
+                
+                post_conversation("assistant", first_response.text)
+                
+        
+        with col[4]:
+            if st.button("End"):
+                st.session_state.clear()
+                st.rerun()
+        
+        # Interview interface
+        if st.session_state.interview_started:
+            st.subheader("Interview Session")
             
-            # Generate AI response
-            ai_response = get_interview_response(
-                st.session_state.resume_text,
-                st.session_state.chat_history
-            )
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": ai_response
-            })
-            st.rerun()
+            # Display chat history
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+            
+            # User input handling
+            if user_input := st.chat_input("Type your answer..."):
+                st.session_state.chat_history.append({
+                    "role": "user",
+                    "content": user_input
+                })
+                
+                post_conversation("candidate",user_input)
+                
+                # Generate AI response
+                ai_response = get_interview_response(
+                    st.session_state.resume_text,
+                    st.session_state.chat_history
+                )
+                
+                post_conversation("assistant",ai_response)
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": ai_response
+                })
+                
+                st.rerun()
+    except Exception as e:
+        st.info("Run")
 
 if __name__ == "__main__":
     interview()

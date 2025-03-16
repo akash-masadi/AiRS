@@ -56,8 +56,8 @@ def upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,bucket_path):
 
         # Store metadata in MongoDB
         document_id = st.session_state.db.create_document("pdf_metadata", metadata)
-        logger.info(f"File uploaded successfully! Document ID: {document_id}")
-
-
+        logger.info(f"File uploaded successfully! Document ID: {document_id}");
+        return document_id
     except Exception as e:
         logger.error(f"An error occurred: {e}")
+        return ''

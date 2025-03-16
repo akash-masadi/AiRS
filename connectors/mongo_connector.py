@@ -3,6 +3,7 @@ import os
 import json
 import threading
 from typing import Any, Dict, List, Optional, Union
+import uuid
 from dotenv import load_dotenv
 import streamlit as st
 import pymongo
@@ -112,6 +113,8 @@ class MongoConnector:
     def create_document(self, collection_name: str, document: Dict[str, Any]) -> str:
         """Create a new document in the specified collection"""
         try:
+            if 'session_id' not in st.session_state:
+                st.session_state.session_id = str(uuid.uuid4()) 
             # # Get structured data from AI model
             # structured_document = self.ai_model.get_applicant_details(document)
             # logger.info(structured_document,type(structured_document))
@@ -128,11 +131,9 @@ class MongoConnector:
             # })
             # document.setdefault()
             document = {
-                "system_metadata": {
-                    "created_at": datetime.datetime.utcnow(),
-                    "updated_at": datetime.datetime.utcnow(),
-                    "processing_version": "1.2.0"
-                },
+                "session_id": st.session_state.session_id,
+                "created_at": datetime.datetime.now(),
+                "updated_at": datetime.datetime.now(),
                 'document' : document
             }
             collection = self.get_collection(collection_name)

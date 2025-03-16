@@ -67,7 +67,7 @@ def write_to_file(filename, content):
     except Exception as e:
         print(f"Error writing to file: {e}")
 
-def save_to_mongodb(db, resume_data, response_text, score_dict):
+def save_to_mongodb(db, pdf_metadata_id, resume_data, response_text, score_dict):
     """Store extracted resume data and AI response in MongoDB."""
   
     document = {
@@ -80,7 +80,7 @@ def save_to_mongodb(db, resume_data, response_text, score_dict):
     # logger.info(document)
     write_to_file('data.txt',str(document))
     
-    db.create_document("resumes", newDocument)
+    db.create_document("resumes", {"pdf_metadata_id": pdf_metadata_id, **newDocument})
 
 def resume_score():
     """Main function to process resume analysis."""
@@ -102,14 +102,14 @@ def resume_score():
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                     temp_file.write(uploaded_file.read())
                     temp_file_path = temp_file.name
-                upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"resume_scorer")
+                pdf_metadata_id = upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"resume_scorer")
                 extracted_text = extract_text(temp_file_path)
             else:
                 extracted_text = uploaded_file.read().decode("utf-8")
         
             response, gen_score = get_gemini_response(chat, extracted_text)
             gen_score_text, score_dict = extract_and_remove_component_scores(gen_score.candidates[0].content.parts[0].text)
-            save_to_mongodb(db, extracted_text, gen_score_text, gen_score.candidates[0].content.parts[0].text)
+            save_to_mongodb(db,pdf_metadata_id, extracted_text, gen_score_text, gen_score.candidates[0].content.parts[0].text)
             
             try:
                 if score_dict.get('components'):

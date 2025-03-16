@@ -111,7 +111,7 @@ def job_relevant_score():
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                 temp_file.write(uploaded_file.read())
                 temp_file_path = temp_file.name
-            upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"job_relevant_scorer")
+            pdf_metadata_id = upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"job_relevant_scorer")
             extracted_text = extract_text(temp_file_path)
         else:
             extracted_text = uploaded_file.read().decode("utf-8")

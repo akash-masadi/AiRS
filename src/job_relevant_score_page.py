@@ -1,3 +1,4 @@
+import logging
 from dotenv import load_dotenv
 import streamlit as st
 import google.generativeai as genai
@@ -5,23 +6,21 @@ import os
 import tempfile
 import pandas as pd
 import altair as alt
+from models.gemini_model import get_model
 from myUtils import extract_and_remove_component_scores, load_file, extract_text, stream_gen
 from streamlit_extras.streaming_write import write
 
+from myUtils.s3_mongodb import upload_pdf_to_s3_and_mongodb
+
 load_dotenv()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("Job Relevancy Score")
 
-def load_all_files():
-    scoring = load_file("./rules/_scoring.txt")
-    scoring_system = load_file("./rules/_scoring_system.txt")
-    grammar_spelling = load_file("./rules/_grammar_spelling.txt")
-    structure = load_file("./rules/_structure.txt")
-    action_verbs = load_file("./rules/_action_verbs.txt")
-    quantifiable = load_file("./rules/_quantifiable.txt")
-    return scoring, scoring_system, grammar_spelling, structure, action_verbs, quantifiable
-
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+model = st.session_state.gemini  if 'gemini' in st.session_state else get_model() 
 chat = model.start_chat(history=[])
 
 @st.cache_data
@@ -112,6 +111,7 @@ def job_relevant_score():
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                 temp_file.write(uploaded_file.read())
                 temp_file_path = temp_file.name
+            upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"job_relevant_scorer")
             extracted_text = extract_text(temp_file_path)
         else:
             extracted_text = uploaded_file.read().decode("utf-8")
@@ -124,7 +124,7 @@ def job_relevant_score():
         try:
             plot_scores(st, score_dict["components"])
         except Exception as e:
-            st.error(f"Error plotting scores: {e}")
+            logger.error(f"Error plotting scores: {e}")
 
         if hasattr(response, 'candidates'):
             content = response.candidates[0].content.parts[0].text

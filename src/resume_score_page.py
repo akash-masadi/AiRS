@@ -8,6 +8,8 @@ from myUtils import extract_and_remove_component_scores, load_file, extract_text
 from streamlit_extras.streaming_write import write
 
 import logging
+
+from myUtils.s3_mongodb import upload_pdf_to_s3_and_mongodb
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Resume Scorer")
@@ -100,6 +102,7 @@ def resume_score():
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
                     temp_file.write(uploaded_file.read())
                     temp_file_path = temp_file.name
+                upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,"resume_scorer")
                 extracted_text = extract_text(temp_file_path)
             else:
                 extracted_text = uploaded_file.read().decode("utf-8")

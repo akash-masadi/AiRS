@@ -31,6 +31,7 @@ def connection_required(func):
         return func(self, *args, **kwargs)
     return wrapper
     
+
 class MongoConnector:
     """Singleton class for MongoDB connections and CRUD operations"""
 

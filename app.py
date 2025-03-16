@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_extras.colored_header import colored_header
 from streamlit_extras.app_logo import add_logo
+from connectors.aws_connector import S3Connector
 from src.home_page import home_page
 from myUtils.file_utils import load_file
 from src.resume_score_page import resume_score
@@ -16,15 +17,19 @@ from connectors.mongo_connector import MongoConnector
 # Load environment variables
 load_dotenv()
 
-# @st.cache_resource
+@st.cache_resource
 def get_mongo_connector():
     return MongoConnector()
 
-# @st.cache_resource
+@st.cache_resource
 def get_model():
     return GeminiModel()
 
-# @st.cache_data
+@st.cache_resource
+def get_aws_s3():
+    return S3Connector()
+
+@st.cache_data
 def load_all_files():
     return {
         "scoring": load_file("./rules/_scoring.txt"),
@@ -54,6 +59,9 @@ def main():
         # Store the MongoDB connector getter function in session state
         st.session_state.db = get_mongo_connector()
     
+    if "aws_s3" not in st.session_state:
+        st.session_state.aws_s3 = get_aws_s3()
+    
     st.sidebar.image("./assets/logo-xx-small.png")
     with st.sidebar:
         colored_header(
@@ -70,24 +78,6 @@ def main():
     page_func = PAGES.get(page_key)
     if page_func:
         page_func()  # The pages can access models and DB from session_state
-
-    # Add MongoDB connection status to sidebar
-    with st.sidebar:
-        st.divider()
-        
-        # Add MongoDB connection status indicator
-        if st.sidebar.checkbox("Show Database Status"):
-            try:
-                # Test connection by getting a ping
-                mongo = st.session_state.db()
-                mongo.client.admin.command('ping')
-                st.sidebar.success("✅ Connected to MongoDB")
-                
-                # Show database stats if connected
-                collections = mongo.db.list_collection_names()
-                st.sidebar.write(f"Collections: {', '.join(collections) if collections else 'None'}")
-            except Exception as e:
-                st.sidebar.error(f"❌ Database Connection Error: {str(e)}")
         
         st.divider()
         st.sidebar.info("Check out the Repository")

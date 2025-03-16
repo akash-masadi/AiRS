@@ -4,6 +4,7 @@ import google.generativeai as genai
 import os
 import tempfile
 from myUtils import extract_text
+from myUtils.s3_mongodb import upload_pdf_to_s3_and_mongodb
 
 load_dotenv()
 
@@ -58,6 +59,7 @@ def interview():
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                     tmp.write(uploaded_file.read())
                     resume_text = extract_text(tmp.name)
+                    upload_pdf_to_s3_and_mongodb(uploaded_file,tmp.name,"interviewer")
             else:
                 resume_text = uploaded_file.read().decode()
             

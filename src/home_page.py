@@ -231,7 +231,6 @@ def home_page():
             "General Tips", 
             "Content Structure", 
             "Keywords & ATS", 
-            "Industry-Specific", 
             "2025 Trends"
         ])
         
@@ -290,17 +289,8 @@ def home_page():
             st.subheader("Try Our Keyword Extractor")
             st.info("Upload a job description in the 'Job Description Relevant Score' tab to extract key skills and keywords for your resume.")
         
-        # Industry-Specific tab
-        with tip_tabs[3]:
-            st.markdown("### 🏢 Industry-Specific Resume Tips")
-            industries = ["Technology", "Healthcare", "Finance", "Marketing", "Education"]
-            selected_industry = st.selectbox("Select your industry", industries)
-            with st.spinner(f"Loading {selected_industry} tips..."):
-                industry_tips = get_industry_specific_tips(selected_industry)
-                st.markdown(industry_tips)
-        
         # 2025 Trends tab
-        with tip_tabs[4]:
+        with tip_tabs[3]:
             st.markdown("### 🚀 Resume Trends for 2025")
             with st.spinner("Loading trends..."):
                 trends = get_recent_trends()

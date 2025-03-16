@@ -91,7 +91,7 @@ class GeminiModel:
             try:
                 genai.configure(api_key=api_key)
                 cls._instance = super().__new__(cls)
-                cls._instance.model = genai.GenerativeModel('gemini-pro')
+                cls._instance.model = genai.GenerativeModel('gemini-2.0-flash')
                 cls._instance.chat = cls._instance.model.start_chat()
             except google_exceptions.GoogleAPIError as e:
                 logger.error("Google API configuration failed: %s", e)
@@ -205,5 +205,9 @@ class GeminiModel:
         except Exception as e:
             logger.error("Processing error: %s", str(e))
             return {}
+    
+    def start_chat(self,history):
+        return self.model.start_chat(history=history)
+        
 def get_model() -> GeminiModel:
     return GeminiModel()

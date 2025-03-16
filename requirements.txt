@@ -11,7 +11,7 @@ streamlit_lottie
 streamlit_option_menu
 streamlit_card
 streamlit_toggle
-pymango
+pymongo
 typing
 openai
 aiofiles

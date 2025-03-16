@@ -88,7 +88,7 @@ def main():
     page_func = PAGES.get(page_key)
     if page_func:
         try:
-            page_func()  # The pages can access models and DB from session_state
+            page_funca()  # The pages can access models and DB from session_state
             st.divider()
             st.sidebar.info("Check out the Repository")
             mention(

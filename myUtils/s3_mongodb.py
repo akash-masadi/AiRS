@@ -17,10 +17,10 @@ logger = logging.getLogger("S3 MongoDB Utils")
 
 # Initialize AWS S3 Connector and MongoDB Connector
 if "aws_s3" not in st.session_state:
-    st.session_state.s3_connector = S3Connector()
+    st.session_state.aws_s3 = S3Connector()
 
 if "db" not in st.session_state:
-    st.session_state.mongo_connector = MongoConnector()
+    st.session_state.db = MongoConnector()
 
 def upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,bucket_path):
     """Handle PDF upload, S3 upload, and MongoDB metadata storage"""
@@ -36,7 +36,7 @@ def upload_pdf_to_s3_and_mongodb(uploaded_file,temp_file_path,bucket_path):
         #     f.write(uploaded_file.getbuffer())
 
         # Upload to S3
-        s3_url = st.session_state.s3_connector.upload_file_to_s3(temp_file_path, s3_key)
+        s3_url = st.session_state.aws_s3.upload_file_to_s3(temp_file_path, s3_key)
         if not s3_url:
             st.error("Failed to upload file to S3")
             return

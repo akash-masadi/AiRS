@@ -1,8 +1,27 @@
 streamlit
 google-generativeai
+azure-ai-inference
 python-dotenv
 pytesseract
 tesseract
 pdf2image
 opencv-python
 streamlit_extras
+streamlit_lottie
+streamlit_option_menu
+streamlit_card
+streamlit_toggle
+pymongo
+typing
+openai
+aiofiles
+boto3
+botocore
+# google_auth_oauthlib
+# google
+# bcrypt
+# jwt
+# logging
+# functools
+# asyncio
+# aiohttp

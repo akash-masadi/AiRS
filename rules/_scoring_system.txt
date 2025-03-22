@@ -72,4 +72,4 @@ compenents = {
     "Additional Sections": 10
 }
 
-Never give full marks for the components .
+Never give full marks for the components.
